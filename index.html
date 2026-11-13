@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Search Dashboard</title>
+<style>
+:root{
+  --bg:#f6f7f9;--card:#fff;--ink:#16202c;--muted:#5d6b7a;--line:#e3e7ec;--chip:#eef1f5;
+  --p0:#2563eb;--p1:#c2410c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--info:#6d28d9;--grey:#64748b;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0f141a;--card:#171e26;--ink:#e6ebf1;--muted:#93a1b0;--line:#26303b;--chip:#202a35;
+  --p0:#60a5fa;--p1:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}}
+:root[data-theme=dark]{--bg:#0f141a;--card:#171e26;--ink:#e6ebf1;--muted:#93a1b0;--line:#26303b;--chip:#202a35;
+  --p0:#60a5fa;--p1:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+h1{font-size:19px;margin:0}
+.sub{color:var(--muted);font-size:12.5px}
+main{max-width:1320px;margin:0 auto;padding:18px 16px 60px}
+.seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer;font:inherit}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.grid{display:grid;gap:14px}
+.cols{grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h3{font-size:12px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.kpi{background:var(--chip);border-radius:9px;padding:9px 10px}
+.kpi b{display:block;font-size:21px;line-height:1.15}
+.kpi span{color:var(--muted);font-size:11.5px}
+.bars .row{display:grid;grid-template-columns:130px 1fr 40px;gap:8px;align-items:center;margin:4px 0;font-size:12.5px}
+.bars .track{background:var(--chip);border-radius:5px;height:12px;overflow:hidden}
+.bars .fill{height:100%;border-radius:5px}
+.bars .lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .num{text-align:right;font-variant-numeric:tabular-nums}
+svg text{fill:var(--muted);font-size:10.5px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td:nth-child(2),td:first-child{white-space:nowrap}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--card)}
+.tablewrap{overflow:auto;max-height:620px}
+.pill{display:inline-block;white-space:nowrap;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+input,select{background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit}
+input{min-width:220px;flex:1}
+a{color:var(--p0)}
+.notes{color:var(--muted);max-width:340px}
+details pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;background:var(--chip);padding:12px;border-radius:8px;max-height:420px;overflow:auto}
+.empty{color:var(--muted);font-style:italic}
+.mt{margin-top:14px}
+.quota .row{grid-template-columns:150px 1fr 54px}
+.ok{color:var(--ok)}.need{color:var(--warn)}
+.pform fieldset{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 12px}
+.pform legend{font-weight:700;padding:0 6px}
+.pform .f{display:grid;grid-template-columns:minmax(160px,300px) 1fr;gap:10px;align-items:start;margin:7px 0}
+.pform label{font-size:12.5px;color:var(--muted);padding-top:6px}
+.pform input,.pform select,.pform textarea{width:100%;min-width:0;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit}
+.pform textarea{min-height:64px;resize:vertical}
+.pform .help{font-size:11.5px;color:var(--muted);margin-top:3px}
+.pform .blank{border-color:var(--warn)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 13px;border-radius:8px;cursor:pointer;font:inherit}
+.btn.pri{background:var(--p0);border-color:var(--p0);color:#fff;font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.status{font-size:12.5px;color:var(--muted)}
+.qtable td{vertical-align:middle}.qtable input,.qtable select{width:100%}
+@media (max-width:640px){.pform .f{grid-template-columns:1fr}.quota .row{grid-template-columns:110px 1fr 48px}}
+@media (max-width:640px){header{padding:14px 16px}.bars .row{grid-template-columns:100px 1fr 34px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Job Search Dashboard</h1><div class="sub" id="gen"></div></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="seg" id="viewSeg"></div>
+    <div class="seg" id="personSeg"></div>
+    <div class="seg" id="rangeSeg"></div>
+  </div>
+</header>
+<main>
+  <div id="err" class="card" style="display:none"></div>
+  <div id="viewDash">
+  <section class="grid cols" id="kpiCards"></section>
+  <section class="grid cols mt" id="quotaCards"></section>
+  <section class="grid cols mt" id="todoCards"></section>
+  <section class="grid cols mt">
+    <div class="card"><h2>Applications per day</h2><div id="dailyChart"></div><div class="legend" id="dailyLegend"></div></div>
+    <div class="card"><h2>Cumulative applications</h2><div id="cumChart"></div><div class="legend" id="cumLegend"></div></div>
+  </section>
+  <section class="grid cols mt" id="breakdownCards"></section>
+  <section class="card mt">
+    <h2>Run history</h2>
+    <div class="tablewrap" style="max-height:340px"><table id="runsTable"></table></div>
+  </section>
+  <section class="card mt">
+    <h2>Applications</h2>
+    <div class="filters">
+      <input id="q" placeholder="Search company, role, location, notes">
+      <select id="fStatus"><option value="">All statuses</option></select>
+      <select id="fTier"><option value="">All tiers</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+      <select id="fRegion"><option value="">All regions</option></select>
+    </div>
+    <div class="tablewrap"><table id="appsTable"></table></div>
+    <div class="sub" id="appsCount" style="margin-top:6px"></div>
+  </section>
+  <section class="grid cols mt" id="resumeCards"></section>
+  <section class="grid cols mt" id="reportCards"></section>
+  </div>
+  <div id="viewProf" style="display:none">
+    <section class="card">
+      <h2>Profiles: answers the agents use on every application</h2>
+      <p class="sub" style="margin:0 0 10px">Edits are saved to <code>&lt;person&gt;/profile.json</code> (and <code>profile.md</code>) inside your jobs folder, so they persist and every future run uses them. Blank fields are treated as unanswered: the agent skips jobs that require them and adds new questions to the question bank below for you to answer. Saving needs Chrome or Edge and a one-time "Connect jobs folder".</p>
+      <div class="bar">
+        <button class="btn" id="connectBtn">Connect jobs folder</button>
+        <span class="status" id="connStatus"></span>
+      </div>
+      <div class="bar" id="profPersonSeg"></div>
+      <div class="bar">
+        <button class="btn pri" id="saveBtn">Save profile</button>
+        <button class="btn" id="dlBtn">Download profile.json</button>
+        <span class="status" id="saveStatus"></span>
+      </div>
+      <div id="profForm" class="pform"></div>
+    </section>
+  </div>
+</main>
+<script src="dashboard/data.js"></script>
+<script>
+(function(){
+let D = window.JOBS_DATA;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+if(!D){ const e=$("#err"); e.style.display="block"; e.innerHTML="No data yet. Run <code>python3 tools/build_dashboard.py</code> in the jobs folder, then reload."; return; }
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const PCOL = ["--p0","--p1"];
+const STATUS_COL = {"applied":"--ok","skipped-question":"--warn","skipped-filter":"--grey","needs-account":"--info","blocked":"--bad","blocked-upload":"--bad","wrong-account":"--bad","error-retry":"--warn"};
+const people = D.people.map((p,i)=>({...p, colorVar:PCOL[i%PCOL.length]}));
+const PUB = !!D.public;
+let sel = "all", range = 30, view = "dash";
+const REG_LABEL = {}; people.forEach(p=>(p.quota_today||[]).forEach(q=>REG_LABEL[q.region]=q.label));
+if(PUB){ document.title="Pipeline Board"; document.querySelector("h1").textContent="Pipeline Board"; }
+const genText = ()=> $("#gen").textContent = "Data updated " + D.generated_at + " PT" + (PUB ? " · public view (no personal details)" : " · refreshes automatically while open");
+genText();
+
+function seg(el, items, cur, onPick){
+  el.innerHTML = items.map(([v,l])=>`<button data-v="${v}" class="${String(v)===String(cur)?"on":""}">${esc(l)}</button>`).join("");
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>onPick(b.dataset.v));
+}
+function drawSegs(){
+  seg($("#viewSeg"), PUB ? [["dash","Dashboard"]] : [["dash","Dashboard"],["prof","Profiles"]], view, v=>{view=v; showView();});
+  seg($("#personSeg"), [["all","Both"], ...people.map(p=>[p.id, p.name.split(" ")[0]])], sel, v=>{sel=v; render();});
+  seg($("#rangeSeg"), [[14,"14d"],[30,"30d"],[90,"90d"],[0,"All"]], range, v=>{range=+v; render();});
+}
+const shown = () => sel==="all" ? people : people.filter(p=>p.id===sel);
+
+function kpis(){
+  $("#kpiCards").innerHTML = shown().map(p=>{
+    const k=p.kpis;
+    const items=[["Applied total",k.applied_total],["Applied today",k.applied_today],["Last 7 days",k.applied_7d],["Last 30 days",k.applied_30d],
+      ["Jobs handled",k.handled_total],["Apply rate (excl. retries)",k.apply_rate+"%"],["Companies",k.companies],["Resume versions",k.resume_versions],
+      ["Runs",k.runs],["Avg / active day",k.avg_per_active_day]];
+    return `<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)} <span class="sub">· ${esc(p.target)}</span></h2>
+      <div class="kpis">${items.map(([l,v])=>`<div class="kpi"><b>${esc(v)}</b><span>${l}</span></div>`).join("")}</div>
+      <div class="sub" style="margin-top:8px">Last run: ${esc(k.last_run||"none yet")}</div></div>`;
+  }).join("");
+}
+
+function series(p){ const d=p.daily; return range? d.slice(-range): d; }
+function allDates(){
+  const set=new Set(); shown().forEach(p=>series(p).forEach(x=>set.add(x.date)));
+  return [...set].sort();
+}
+function svgChart(el, kind){
+  const dates=allDates(), W=Math.max(320, el.clientWidth||600), H=220, L=34, R=10, T=10, B=26;
+  if(!dates.length){ el.innerHTML='<p class="empty">No data yet.</p>'; return; }
+  const ps=shown(), map=ps.map(p=>Object.fromEntries(series(p).map(x=>[x.date,x])));
+  const val=(m,d)=> kind==="cum" ? (m[d]?.cum_applied ?? null) : (m[d]?.applied ?? 0);
+  let max=1; dates.forEach(d=>map.forEach(m=>{const v=val(m,d); if(v>max)max=v;}));
+  const stp = Math.max(1, Math.ceil(max/4)), nice = stp*4;
+  const x0=i=>L+(W-L-R)*(i+0.5)/dates.length, y=v=>T+(H-T-B)*(1-v/nice);
+  let g=`<svg width="100%" viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let i=0;i<=4;i++){const v=nice*i/4; g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css("--line")}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${v}</text>`;}
+  const step=Math.ceil(dates.length/8);
+  dates.forEach((d,i)=>{ if(i%step===0) g+=`<text x="${x0(i)}" y="${H-8}" text-anchor="middle">${d.slice(5)}</text>`; });
+  if(kind==="cum"){
+    ps.forEach((p,j)=>{ let pts=[]; dates.forEach((d,i)=>{const v=val(map[j],d); if(v!==null) pts.push(`${x0(i)},${y(v)}`);});
+      g+=`<polyline fill="none" stroke="${css(p.colorVar)}" stroke-width="2.2" points="${pts.join(" ")}"/>`;
+      const last=pts[pts.length-1]; if(last){const [lx,ly]=last.split(","); g+=`<circle cx="${lx}" cy="${ly}" r="3.5" fill="${css(p.colorVar)}"><title>${esc(p.name)}</title></circle>`;}
+    });
+  } else {
+    const bw=Math.max(2,((W-L-R)/dates.length)*0.8/ps.length);
+    dates.forEach((d,i)=>ps.forEach((p,j)=>{const v=val(map[j],d); if(!v) return;
+      const bx=x0(i)-bw*ps.length/2+j*bw;
+      g+=`<rect x="${bx}" y="${y(v)}" width="${bw-1}" height="${y(0)-y(v)}" rx="2" fill="${css(p.colorVar)}"><title>${esc(p.name)} ${d}: ${v} applied</title></rect>`;}));
+  }
+  el.innerHTML=g+"</svg>";
+}
+function legend(el){ el.innerHTML = shown().map(p=>`<span><span class="dot" style="background:var(${p.colorVar})"></span> ${esc(p.name)}</span>`).join(""); }
+
+function bars(obj, colorFn){
+  const e=Object.entries(obj).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if(!e.length) return '<p class="empty">Nothing yet.</p>';
+  const m=Math.max(...e.map(x=>x[1]));
+  return '<div class="bars">'+e.map(([k,v])=>`<div class="row"><span class="lab" title="${esc(k)}">${esc(k)}</span><div class="track"><div class="fill" style="width:${100*v/m}%;background:var(${colorFn(k)})"></div></div><span class="num">${v}</span></div>`).join("")+'</div>';
+}
+function quota(){
+  $("#quotaCards").innerHTML = shown().map(p=>{
+    const q=p.quota_today||[]; const met=q.filter(x=>x.applied>=x.target).length;
+    return `<div class="card quota"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name.split(" ")[0])}: today's regional minimum (${p.min_per_region_per_day||5} per region) <span class="sub">${met}/${q.length} met</span></h2>
+    <div class="bars">${q.map(x=>`<div class="row"><span class="lab">${esc(x.label)}</span><div class="track"><div class="fill" style="width:${Math.min(100,100*x.applied/x.target)}%;background:var(${x.applied>=x.target?"--ok":"--warn"})"></div></div><span class="num ${x.applied>=x.target?"ok":"need"}">${x.applied}/${x.target}</span></div>`).join("")}</div></div>`;
+  }).join("");
+}
+function breakdowns(){
+  $("#breakdownCards").innerHTML = shown().map(p=>{
+    const tiers=Object.fromEntries(Object.entries(p.by_tier).map(([k,v])=>[`Tier ${k}`,v]));
+    return `<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)}: breakdown</h2>
+      <h3>All jobs by status</h3>${bars(p.status, k=>STATUS_COL[k]||"--grey")}
+      <h3>Applied by priority tier</h3>${bars(tiers, ()=>p.colorVar)}
+      <h3>Applied by region (all time)</h3>${bars(p.by_region||{}, ()=>p.colorVar)}
+      <h3>Applied by track</h3>${bars(p.by_track||{}, ()=>p.colorVar)}
+      <h3>Applied by source</h3>${bars(p.by_source, ()=>p.colorVar)}
+      ${PUB?"":`<h3>Top skip reasons (answer these in Profiles)</h3>`}${PUB?"":p.skip_reasons.length? '<div class="bars">'+p.skip_reasons.map(r=>`<div class="row" style="grid-template-columns:1fr 40px"><span class="lab" title="${esc(r.reason)}">${esc(r.reason)}</span><span class="num">${r.count}</span></div>`).join("")+'</div>' : '<p class="empty">None.</p>'}
+    </div>`;
+  }).join("");
+}
+
+function runsTable(){
+  const rows=[];
+  shown().forEach(p=>{
+    p.runs.forEach(r=>rows.push({p, at:r.at, c:r.counts, file:r.file}));
+  });
+  rows.sort((a,b)=>b.at.localeCompare(a.at));
+  const cols=["applied","skipped-question","skipped-filter","needs-account","blocked","wrong-account"];
+  $("#runsTable").innerHTML = rows.length ? `<tr><th>Run (PT)</th><th>Person</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Report</th></tr>`+
+    rows.map(r=>`<tr><td>${esc(r.at)}</td><td><span class="dot" style="background:var(${r.p.colorVar})"></span> ${esc(r.p.name.split(" ")[0])}</td>${cols.map(c=>`<td>${r.c[c]??""}</td>`).join("")}<td><a href="${esc(r.p.folder+"/"+r.file)}">open</a></td></tr>`).join("")
+    : '<tr><td class="empty">No runs yet.</td></tr>';
+}
+
+function appsTable(){
+  const q=$("#q").value.toLowerCase(), fs=$("#fStatus").value, ft=$("#fTier").value, fr=$("#fRegion").value;
+  let rows=[]; shown().forEach(p=>p.applications.forEach(a=>rows.push({...a,p})));
+  rows.sort((a,b)=>b.at.localeCompare(a.at));
+  const all=rows.length;
+  rows=rows.filter(a=>(!fr||a.region===fr)&&(!fs||a.status===fs)&&(!ft||String(a.tier)===ft)&&(!q||[a.company,a.role,a.location,a.notes,a.source].join(" ").toLowerCase().includes(q)));
+  const pill=s=>`<span class="pill" style="color:var(${STATUS_COL[s]||"--grey"});background:color-mix(in srgb,var(${STATUS_COL[s]||"--grey"}) 14%,transparent)">${esc(s)}</span>`;
+  $("#appsTable").innerHTML=`<tr><th>When (PT)</th>${sel==="all"?"<th>Who</th>":""}<th>Status</th><th>Company</th><th>Role</th><th>Location</th><th>Region</th><th>Tier</th><th>Source</th><th>Resume</th><th>Notes</th></tr>`+
+    rows.slice(0,600).map(a=>`<tr><td style="white-space:nowrap">${esc(a.at)}</td>${sel==="all"?`<td><span class="dot" style="background:var(${a.p.colorVar})"></span> ${esc(a.p.name.split(" ")[0])}</td>`:""}
+      <td>${pill(a.status)}</td><td>${esc(a.company)}</td><td>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.role)}</a>`:esc(a.role)}</td>
+      <td>${esc(a.location)}</td><td>${esc(REG_LABEL[a.region]||a.region||"")}${a.track==="salesforce"?' <span class="pill" style="color:var(--info)">SF track</span>':""}</td><td>${esc(a.tier)}</td><td>${esc(a.source)}</td>
+      <td>${a.resume_pdf?`<a href="${esc(a.resume_pdf)}" target="_blank">PDF</a>`:'<span class="sub">base</span>'}</td>
+      <td class="notes">${esc(a.notes)}</td></tr>`).join("");
+  $("#appsCount").textContent=`Showing ${Math.min(rows.length,600)} of ${rows.length} matching (${all} total)`;
+}
+function statusOptions(){
+  const s=new Set(); people.forEach(p=>p.applications.forEach(a=>s.add(a.status)));
+  const cur=$("#fStatus").value;
+  $("#fStatus").innerHTML='<option value="">All statuses</option>'+[...s].sort().map(x=>`<option ${x===cur?"selected":""}>${esc(x)}</option>`).join("");
+  const r=new Set(); people.forEach(p=>p.applications.forEach(a=>a.region&&r.add(a.region))); const cr=$("#fRegion").value;
+  $("#fRegion").innerHTML='<option value="">All regions</option>'+[...r].sort().map(x=>`<option value="${esc(x)}" ${x===cr?"selected":""}>${esc(REG_LABEL[x]||x)}</option>`).join("");
+}
+function todo(){
+  $("#todoCards").innerHTML = shown().map(p=>{
+    const t=(p.todo||[]), open=t.filter(x=>!x.done), done=t.filter(x=>x.done);
+    const canMark = !PUB && typeof dir!=="undefined" && dir;
+    const row=x=>`<tr><td style="white-space:nowrap">${esc(x.at)}</td><td>${esc(x.company)}</td><td><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.role)}</a></td><td>${esc(x.location)}</td>
+      <td><span class="pill" style="color:var(${x.reason==="CAPTCHA"?"--bad":"--info"});background:color-mix(in srgb,var(${x.reason==="CAPTCHA"?"--bad":"--info"}) 14%,transparent)">${esc(x.reason)}</span></td>
+      ${PUB?"":`<td class="notes">${esc(x.notes)}</td>`}
+      ${canMark?`<td><button class="btn" data-todo="${esc(p.id)}" data-url="${esc(x.url)}" data-done="${x.done?1:0}">${x.done?"Undo":"Mark applied"}</button></td>`:""}</tr>`;
+    return `<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name.split(" ")[0])}: apply yourself (${open.length})</h2>
+      <p class="sub" style="margin:0 0 8px">Good-fit jobs the agent couldn't submit: CAPTCHA, sign-in or account walls. Open the link and apply by hand.${!PUB&&!canMark?" Connect the jobs folder (Profiles tab) to mark them applied.":""}</p>
+      ${open.length?`<div class="tablewrap" style="max-height:360px"><table><tr><th>Found</th><th>Company</th><th>Role</th><th>Location</th><th>Why</th>${PUB?"":"<th>Notes</th>"}${canMark?"<th></th>":""}</tr>${open.map(row).join("")}</table></div>`:'<p class="empty">Nothing waiting.</p>'}
+      ${done.length?`<details style="margin-top:8px"><summary class="sub">Marked applied (${done.length})</summary><table>${done.map(row).join("")}</table></details>`:""}</div>`;
+  }).join("");
+  $("#todoCards").querySelectorAll("[data-todo]").forEach(b=>b.onclick=()=>markTodo(b.dataset.todo,b.dataset.url,b.dataset.done==="1"));
+}
+async function markTodo(pid,url,undo){
+  const p=people.find(x=>x.id===pid); if(!dir||!p) return;
+  let cur={}; try{ cur=JSON.parse(await readText(p.folder+"/todo_done.json")); }catch(e){}
+  const k=url.replace(/\/$/,"");
+  if(undo) delete cur[k]; else cur[k]=stamp();
+  await writeText(p.folder+"/todo_done.json", JSON.stringify(cur,null,1));
+  (p.todo||[]).forEach(t=>{ if(t.url.replace(/\/$/,"")===k) t.done=undo?"":cur[k]; });
+  todo();
+}
+function resumes(){
+  $("#resumeCards").innerHTML = shown().map(p=>`<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)}: tailored resume versions (${p.resume_versions.length})</h2>
+    ${p.resume_versions.length?`<div class="tablewrap" style="max-height:300px"><table><tr><th>Created (PT)</th><th>Company</th><th>Role</th><th>Reworded bullets</th><th></th></tr>${p.resume_versions.map(v=>`<tr><td>${esc(v.created)}</td><td>${esc(v.company)}</td><td>${esc(v.role)}</td><td>${v.rewritten}</td><td><a href="${esc(v.pdf)}" target="_blank">PDF</a></td></tr>`).join("")}</table></div>`:'<p class="empty">No tailored versions yet. They appear here after the next run.</p>'}
+  </div>`).join("");
+}
+function reports(){
+  $("#reportCards").innerHTML = shown().map(p=>`<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)}: latest run report</h2>
+    ${p.latest_report.text?`<details><summary>${esc(p.latest_report.at)} PT</summary><pre>${esc(p.latest_report.text)}</pre></details>`:'<p class="empty">No reports yet.</p>'}</div>`).join("");
+}
+function render(){ drawSegs(); kpis(); quota(); todo(); svgChart($("#dailyChart"),"daily"); svgChart($("#cumChart"),"cum"); legend($("#dailyLegend")); legend($("#cumLegend")); breakdowns(); runsTable(); statusOptions(); appsTable(); if(!PUB){ resumes(); reports(); } else { $("#resumeCards").innerHTML=""; $("#reportCards").innerHTML=""; } }
+["#q","#fStatus","#fTier","#fRegion"].forEach(s=>$(s).addEventListener("input",appsTable));
+// ---------- Profiles editor (File System Access API; writes <person>/profile.json + profile.md) ----------
+let dir = null, profSel = people[0]?.id, dirty = false;
+const profs = {}; people.forEach(p=>{ if(p.profile) profs[p.id] = JSON.parse(JSON.stringify(p.profile)); });
+const fsOK = "showDirectoryPicker" in window;
+const nq = s => String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("jobsdash",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function kvGet(k){ try{ const db=await idb(); return await new Promise(r=>{ const q=db.transaction("kv").objectStore("kv").get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function kvSet(k,v){ try{ const db=await idb(); db.transaction("kv","readwrite").objectStore("kv").put(v,k); }catch(e){} }
+async function fileAt(path, create){ let h=dir; const parts=path.split("/"); for(let i=0;i<parts.length-1;i++) h=await h.getDirectoryHandle(parts[i],{create:!!create}); return h.getFileHandle(parts.at(-1),{create:!!create}); }
+async function readText(path){ const f=await (await fileAt(path)).getFile(); return f.text(); }
+async function writeText(path, txt){ const w=await (await fileAt(path,true)).createWritable(); await w.write(txt); await w.close(); }
+function connStatus(t){ $("#connStatus").textContent=t; }
+async function useDir(h, interactive){
+  let perm = await h.queryPermission({mode:"readwrite"});
+  if(perm!=="granted" && interactive) perm = await h.requestPermission({mode:"readwrite"});
+  if(perm!=="granted"){ connStatus("Folder remembered. Click Connect to allow saving again."); $("#connectBtn").textContent="Reconnect jobs folder"; return false; }
+  const prev=dir; dir=h;
+  try{ JSON.parse(await readText("people.json")); }catch(e){ dir=prev; connStatus("That folder has no people.json. Pick the 'jobs' folder that contains dashboard.html."); return false; }
+  await kvSet("dir",h);
+  for(const p of people){ try{ profs[p.id]=JSON.parse(await readText(p.folder+"/profile.json")); profs["_orig_"+p.id]=(profs[p.id].questions||[]).map(q=>nq(q.q)); }catch(e){} }
+  connStatus("Connected: saving goes straight into the jobs folder."); $("#connectBtn").textContent="Connected ✓";
+  if(!dirty) renderProf(); if(view==="dash") todo(); return true;
+}
+$("#connectBtn").onclick = async ()=>{
+  if(!fsOK){ connStatus("This browser can't save to folders. Open dashboard.html in Chrome or Edge, or use Download and replace the file."); return; }
+  const saved = await kvGet("dir");
+  if(saved && await useDir(saved,true)) return;
+  try{ await useDir(await window.showDirectoryPicker({id:"jobs",mode:"readwrite"}), true); }catch(e){ if(e.name!=="AbortError") connStatus("Could not open folder: "+e.message); }
+};
+(async()=>{ if(!fsOK){ connStatus("Saving needs Chrome or Edge. You can still edit and download."); return; } const h=await kvGet("dir"); if(h) await useDir(h,false); else connStatus("Not connected yet."); })();
+
+function profMd(pr){
+  const out=[`# Applicant profile: ${pr.name||""}`,"","GENERATED from profile.json (edit it in dashboard.html > Profiles). Blank = not answered: if a required form question needs it, skip the job and record the question.",`Last updated: ${pr.updated_at||""}`,""];
+  for(const s of pr.sections||[]){ out.push("## "+s.title);
+    for(const f of s.fields){ const v=String(f.value||"").trim();
+      if(v.includes("\n")){ out.push(`- ${f.label}:`); v.split("\n").filter(x=>x.trim()).forEach(l=>out.push("  - "+l.trim())); }
+      else out.push(`- ${f.label}: ${v||"(blank)"}`); }
+    out.push(""); }
+  const qs=pr.questions||[]; if(qs.length){ out.push("## Question bank (answers to reuse on future forms)"); qs.forEach(q=>out.push(`- Q: ${q.q}  ->  A: ${q.a||"(unanswered: skip if required)"}`)); out.push(""); }
+  return out.join("\n");
+}
+function input(f, id){
+  const v=f.value||"", cls=v.trim()?"":"blank";
+  if(f.type==="select"){ const opts=[...(f.options||[])]; if(v && !opts.includes(v)) opts.unshift(v);
+    return `<select id="${id}" class="${cls}">${opts.map(o=>`<option value="${esc(o)}" ${o===v?"selected":""}>${esc(o||"(not answered)")}</option>`).join("")}</select>`; }
+  if(f.type==="textarea") return `<textarea id="${id}" class="${cls}" rows="${Math.min(8,Math.max(2,v.split("\n").length+1))}">${esc(v)}</textarea>`;
+  return `<input id="${id}" class="${cls}" value="${esc(v)}">`;
+}
+function renderProf(){
+  const bar=$("#profPersonSeg");
+  bar.innerHTML=`<div class="seg">${people.map(p=>`<button data-v="${p.id}" class="${p.id===profSel?"on":""}">${esc(p.name)}</button>`).join("")}</div>`;
+  bar.querySelectorAll("button").forEach(b=>b.onclick=()=>{ if(dirty && !confirm("Discard unsaved changes?")) return; dirty=false; profSel=b.dataset.v; renderProf(); });
+  const pr=profs[profSel];
+  if(!pr){ $("#profForm").innerHTML='<p class="empty">No profile.json for this person yet.</p>'; return; }
+  const blanks=pr.sections.reduce((n,s)=>n+s.fields.filter(f=>!String(f.value||"").trim()).length,0);
+  const unanswered=(pr.questions||[]).filter(q=>!String(q.a||"").trim()).length;
+  let h=`<p class="sub">Last saved ${esc(pr.updated_at||"never")} · ${blanks} blank field(s) · ${unanswered} unanswered question(s). Blank items are outlined.</p>`;
+  pr.sections.forEach((s,si)=>{ h+=`<fieldset><legend>${esc(s.title)}</legend>`+s.fields.map((f,fi)=>`<div class="f"><label for="f_${si}_${fi}">${esc(f.label)}</label><div>${input(f,`f_${si}_${fi}`)}${f.help?`<div class="help">${esc(f.help)}</div>`:""}</div></div>`).join("")+`</fieldset>`; });
+  const qs=pr.questions||[];
+  h+=`<fieldset><legend>Question bank (${qs.length})</legend><p class="help">Questions the agents met on real forms that your profile didn't cover. Answer once; every future application reuses the answer. Highest count first.</p>
+  <div class="tablewrap" style="max-height:none"><table class="qtable"><tr><th style="width:45%">Question</th><th>Your answer</th><th>Seen</th><th></th></tr>`+
+  qs.map((q,i)=>({q,i})).sort((a,b)=>(b.q.count||0)-(a.q.count||0)).map(({q,i})=>{
+    const opts=(q.options||"").split("|").map(x=>x.trim()).filter(Boolean);
+    const ctl= opts.length ? `<select id="q_${i}" class="${q.a?"":"blank"}"><option value="">(not answered)</option>${opts.map(o=>`<option ${o===q.a?"selected":""}>${esc(o)}</option>`).join("")}</select>` : `<input id="q_${i}" class="${q.a?"":"blank"}" value="${esc(q.a||"")}">`;
+    return `<tr><td>${esc(q.q)}${q.companies?.length?`<div class="help">${esc(q.companies.join(", "))}</div>`:""}</td><td>${ctl}</td><td>${q.count||1}×</td><td><button class="btn" data-del="${i}" title="Remove">✕</button></td></tr>`;}).join("")+
+  `</table></div><div class="bar" style="margin-top:10px"><input id="newQ" placeholder="Add your own question (exact wording)"><input id="newA" placeholder="Answer"><button class="btn" id="addQ">Add</button></div></fieldset>`;
+  $("#profForm").innerHTML=h;
+  $("#profForm").oninput=()=>{ dirty=true; $("#saveStatus").textContent="Unsaved changes"; };
+  $("#profForm").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ collect(); pr.questions.splice(+b.dataset.del,1); pr._deleted=(pr._deleted||[]); dirty=true; renderProf(); $("#saveStatus").textContent="Unsaved changes"; });
+  $("#addQ").onclick=()=>{ const q=$("#newQ").value.trim(); if(!q) return; collect(); pr.questions=pr.questions||[]; pr.questions.push({q,a:$("#newA").value.trim(),options:"",count:0,added:new Date().toISOString().slice(0,10),companies:[],source:"you"}); dirty=true; renderProf(); $("#saveStatus").textContent="Unsaved changes"; };
+}
+function collect(){
+  const pr=profs[profSel]; if(!pr) return;
+  pr.sections.forEach((s,si)=>s.fields.forEach((f,fi)=>{ const el=document.getElementById(`f_${si}_${fi}`); if(el) f.value=el.value; }));
+  (pr.questions||[]).forEach((q,i)=>{ const el=document.getElementById(`q_${i}`); if(el) q.a=el.value.trim(); });
+}
+function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+$("#saveBtn").onclick = async ()=>{
+  collect(); const pr=profs[profSel], person=people.find(p=>p.id===profSel);
+  if(!dir){ $("#saveStatus").textContent = fsOK ? "Click 'Connect jobs folder' first (one time), then Save." : "This browser can't save to folders: use Download profile.json."; return; }
+  try{
+    // merge with the file on disk so questions an agent added meanwhile are kept
+    let disk=null; try{ disk=JSON.parse(await readText(person.folder+"/profile.json")); }catch(e){}
+    const mine=new Map((pr.questions||[]).map(q=>[nq(q.q),q]));
+    const removed=new Set((profs["_orig_"+profSel]||[]).filter(k=>!mine.has(k)));
+    if(disk){ for(const q of disk.questions||[]){ const k=nq(q.q); if(mine.has(k)){ const m=mine.get(k); m.count=Math.max(m.count||0,q.count||0); m.companies=q.companies||m.companies; m.last_seen=q.last_seen||m.last_seen; } else if(!removed.has(k)){ pr.questions.push(q); mine.set(k,q); } } }
+    delete pr._deleted; pr.updated_at=stamp();
+    await writeText(person.folder+"/profile.json", JSON.stringify(pr,null,1));
+    await writeText(person.folder+"/profile.md", profMd(pr));
+    profs["_orig_"+profSel]=(pr.questions||[]).map(q=>nq(q.q));
+    dirty=false; $("#saveStatus").textContent="Saved "+pr.updated_at+" to "+person.folder+"/profile.json"; renderProf();
+  }catch(e){ $("#saveStatus").textContent="Save failed: "+e.message+". Try Reconnect."; }
+};
+$("#dlBtn").onclick=()=>{ collect(); const pr=profs[profSel]; const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(pr,null,1)],{type:"application/json"})); a.download="profile.json"; a.click(); $("#saveStatus").textContent="Downloaded. Replace "+profSel+"/profile.json in the jobs folder with it."; };
+people.forEach(p=>{ profs["_orig_"+p.id]=(profs[p.id]?.questions||[]).map(q=>nq(q.q)); });
+window.addEventListener("beforeunload",e=>{ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+function showView(){ $("#viewDash").style.display=view==="dash"?"":"none"; $("#viewProf").style.display=view==="prof"?"":"none"; $("#personSeg").style.display=view==="dash"?"":"none"; $("#rangeSeg").style.display=view==="dash"?"":"none"; drawSegs(); if(view==="prof") renderProf(); else render(); }
+try{ if(location.hash==="#profiles") view="prof"; }catch(e){}
+
+let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{svgChart($("#dailyChart"),"daily");svgChart($("#cumChart"),"cum");},150);});
+// auto-refresh: re-load dashboard/data.js every 60s and re-render if it changed (works from file:// and GitHub Pages)
+function reloadData(){
+  if(view!=="dash") return;
+  const sc=document.createElement("script"); sc.src="dashboard/data.js?t="+Date.now();
+  sc.onload=()=>{ const N=window.JOBS_DATA; sc.remove(); if(!N||N.generated_at===D.generated_at) return;
+    D=N; const fresh=N.people.map((p,i)=>({...p, colorVar:PCOL[i%PCOL.length]})); people.length=0; fresh.forEach(p=>people.push(p));
+    people.forEach(p=>(p.quota_today||[]).forEach(q=>REG_LABEL[q.region]=q.label)); genText(); render(); };
+  sc.onerror=()=>sc.remove(); document.body.appendChild(sc);
+}
+setInterval(reloadData, 60000);
+showView();
+})();
+</script>
+</body>
+</html>

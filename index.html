@@ -7,13 +7,13 @@
 <style>
 :root{
   --bg:#f6f7f9;--card:#fff;--ink:#16202c;--muted:#5d6b7a;--line:#e3e7ec;--chip:#eef1f5;
-  --p0:#2563eb;--p1:#c2410c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--info:#6d28d9;--grey:#64748b;
+  --p0:#2563eb;--p1:#c2410c;--p2:#0f766e;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--info:#6d28d9;--grey:#64748b;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
   --bg:#0f141a;--card:#171e26;--ink:#e6ebf1;--muted:#93a1b0;--line:#26303b;--chip:#202a35;
-  --p0:#60a5fa;--p1:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}}
+  --p0:#60a5fa;--p1:#fb923c;--p2:#2dd4bf;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}}
 :root[data-theme=dark]{--bg:#0f141a;--card:#171e26;--ink:#e6ebf1;--muted:#93a1b0;--line:#26303b;--chip:#202a35;
-  --p0:#60a5fa;--p1:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}
+  --p0:#60a5fa;--p1:#fb923c;--p2:#2dd4bf;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#a78bfa;--grey:#94a3b8;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
@@ -138,7 +138,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 if(!D){ const e=$("#err"); e.style.display="block"; e.innerHTML="No data yet. Run <code>python3 tools/build_dashboard.py</code> in the jobs folder, then reload."; return; }
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const PCOL = ["--p0","--p1"];
+const PCOL = ["--p0","--p1","--p2"];
 const STATUS_COL = {"applied":"--ok","skipped-question":"--warn","skipped-filter":"--grey","needs-account":"--info","blocked":"--bad","blocked-upload":"--bad","wrong-account":"--bad","error-retry":"--warn"};
 const people = D.people.map((p,i)=>({...p, colorVar:PCOL[i%PCOL.length]}));
 const PUB = !!D.public;
@@ -154,7 +154,7 @@ function seg(el, items, cur, onPick){
 }
 function drawSegs(){
   seg($("#viewSeg"), PUB ? [["dash","Dashboard"]] : [["dash","Dashboard"],["prof","Profiles"]], view, v=>{view=v; showView();});
-  seg($("#personSeg"), [["all","Both"], ...people.map(p=>[p.id, p.name.split(" ")[0]])], sel, v=>{sel=v; render();});
+  seg($("#personSeg"), [["all","All"], ...people.map(p=>[p.id, p.name.split(" ")[0]])], sel, v=>{sel=v; render();});
   seg($("#rangeSeg"), [[14,"14d"],[30,"30d"],[90,"90d"],[0,"All"]], range, v=>{range=+v; render();});
 }
 const shown = () => sel==="all" ? people : people.filter(p=>p.id===sel);

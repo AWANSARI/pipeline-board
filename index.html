@@ -19,12 +19,20 @@ body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-ap
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
 h1{font-size:19px;margin:0}
 .sub{color:var(--muted);font-size:12.5px}
-main{max-width:1320px;margin:0 auto;padding:18px 16px 60px}
+main{max-width:1900px;margin:0 auto;padding:18px 16px 60px}
 .seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer;font:inherit}
 .seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
 .grid{display:grid;gap:14px}
 .cols{grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr))}
+.pcols{grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
+.grid>*{min-width:0}
+@media (max-width:1100px){.pcols{grid-template-columns:1fr}}
+.viz svg{display:block;width:100%;height:auto}
+.tip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:20;display:none;max-width:260px}
+.viz .country{fill:var(--chip);stroke:var(--line);stroke-width:.5}
+.viz .country.target{fill:color-mix(in srgb,var(--p0) 10%,var(--chip))}
+.viz text{fill:var(--muted);font-size:11px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .card h2{font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .card h3{font-size:12px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -86,14 +94,19 @@ details pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;back
 <main>
   <div id="err" class="card" style="display:none"></div>
   <div id="viewDash">
-  <section class="grid cols" id="kpiCards"></section>
-  <section class="grid cols mt" id="quotaCards"></section>
-  <section class="grid cols mt" id="todoCards"></section>
+  <section class="grid pcols" id="kpiCards"></section>
+  <section class="grid pcols mt" id="quotaCards"></section>
+  <section class="grid pcols mt" id="todoCards"></section>
   <section class="grid cols mt">
     <div class="card"><h2>Applications per day</h2><div id="dailyChart"></div><div class="legend" id="dailyLegend"></div></div>
     <div class="card"><h2>Cumulative applications</h2><div id="cumChart"></div><div class="legend" id="cumLegend"></div></div>
   </section>
-  <section class="grid cols mt" id="breakdownCards"></section>
+  <section class="card mt viz"><h2>Where applications went <span class="sub" id="mapNote"></span></h2><div id="mapViz"></div><div class="legend" id="mapLegend"></div></section>
+  <section class="grid cols mt">
+    <div class="card viz"><h2>Applied by region and person</h2><div id="heatViz"></div></div>
+    <div class="card viz"><h2>What happened to every job found</h2><div id="funnelViz"></div><div class="legend" id="funnelLegend"></div></div>
+  </section>
+  <section class="grid pcols mt" id="breakdownCards"></section>
   <section class="card mt">
     <h2>Run history</h2>
     <div class="tablewrap" style="max-height:340px"><table id="runsTable"></table></div>
@@ -109,8 +122,8 @@ details pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;back
     <div class="tablewrap"><table id="appsTable"></table></div>
     <div class="sub" id="appsCount" style="margin-top:6px"></div>
   </section>
-  <section class="grid cols mt" id="resumeCards"></section>
-  <section class="grid cols mt" id="reportCards"></section>
+  <section class="grid pcols mt" id="resumeCards"></section>
+  <section class="grid pcols mt" id="reportCards"></section>
   </div>
   <div id="viewProf" style="display:none">
     <section class="card">
@@ -130,7 +143,10 @@ details pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;back
     </section>
   </div>
 </main>
+<div class="tip" id="tip"></div>
 <script src="dashboard/data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
 (function(){
 let D = window.JOBS_DATA;
@@ -297,7 +313,77 @@ function reports(){
   $("#reportCards").innerHTML = shown().map(p=>`<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)}: latest run report</h2>
     ${p.latest_report.text?`<details><summary>${esc(p.latest_report.at)} PT</summary><pre>${esc(p.latest_report.text)}</pre></details>`:'<p class="empty">No reports yet.</p>'}</div>`).join("");
 }
-function render(){ drawSegs(); kpis(); quota(); todo(); svgChart($("#dailyChart"),"daily"); svgChart($("#cumChart"),"cum"); legend($("#dailyLegend")); legend($("#cumLegend")); breakdowns(); runsTable(); statusOptions(); appsTable(); if(!PUB){ resumes(); reports(); } else { $("#resumeCards").innerHTML=""; $("#reportCards").innerHTML=""; } }
+// ---------- D3 visuals: world map, region heatmap, outcome bars ----------
+const REG_POS = {"bay-area":[-122.1,37.4],"remote-us":[-98.5,39.5],"us-other":[-84.4,36.2],"uae":[54.4,24.5],"saudi-arabia":[46.7,24.7],
+  "norway":[10.7,59.9],"sweden":[18.1,59.3],"finland":[24.9,60.2],"australia":[151.2,-33.9],"singapore":[103.8,1.35],"canada":[-79.4,43.7]};
+const REG_ORDER = Object.keys(REG_POS);
+const TARGET_COUNTRIES = new Set(["840","124","784","682","578","752","246","036","702"]); // US, CA, AE, SA, NO, SE, FI, AU, SG
+const tip = document.getElementById("tip");
+function showTip(ev, html){ tip.innerHTML=html; tip.style.display="block"; const x=Math.min(ev.clientX+14, innerWidth-280); tip.style.left=x+"px"; tip.style.top=(ev.clientY+14)+"px"; }
+function hideTip(){ tip.style.display="none"; }
+function regionCounts(p, statuses){ const c={}; (p.applications||[]).forEach(a=>{ if(!statuses||statuses.includes(a.status)){ const r=a.region||"us-other"; c[r]=(c[r]||0)+1; } }); return c; }
+let WORLD=null, worldTried=false;
+function drawMap(){
+  const el=document.getElementById("mapViz"); if(!el) return;
+  if(!window.d3||!window.topojson){ el.innerHTML='<p class="empty">Map needs an internet connection (loads D3 from jsdelivr).</p>'; return; }
+  if(!WORLD){ if(!worldTried){ worldTried=true; d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then(w=>{WORLD=w; drawMap();}).catch(()=>{ el.innerHTML='<p class="empty">Could not load the world map.</p>'; }); } return; }
+  const W=Math.max(320, el.clientWidth||1000), H=Math.min(Math.round(W*0.46), 560);
+  const countries=topojson.feature(WORLD, WORLD.objects.countries).features.filter(f=>f.id!=="010");
+  const proj=d3.geoNaturalEarth1().fitExtent([[6,6],[W-6,H-6]], {type:"FeatureCollection",features:countries});
+  const path=d3.geoPath(proj);
+  el.innerHTML=""; const svg=d3.select(el).append("svg").attr("viewBox",`0 0 ${W} ${H}`);
+  svg.append("g").selectAll("path").data(countries).join("path").attr("d",path).attr("class",d=>"country"+(TARGET_COUNTRIES.has(String(d.id).padStart(3,"0"))?" target":""));
+  const ps=shown(), counts=ps.map(p=>({p, c:regionCounts(p,["applied"]), t:regionCounts(p,["manual-todo","blocked","needs-account"])}));
+  let max=1; counts.forEach(x=>Object.values(x.c).forEach(v=>max=Math.max(max,v)));
+  const r=d3.scaleSqrt().domain([0,max]).range([0, Math.max(10, W/45)]);
+  const g=svg.append("g");
+  REG_ORDER.forEach(rid=>{
+    const [x,y]=proj(REG_POS[rid]);
+    const vals=counts.map(o=>({p:o.p, v:o.c[rid]||0, t:o.t[rid]||0}));
+    const total=d3.sum(vals,d=>d.v);
+    g.append("circle").attr("cx",x).attr("cy",y).attr("r",4).attr("fill","none").attr("stroke",css("--muted")).attr("stroke-width",1).attr("stroke-dasharray","2 2");
+    vals.forEach((d,i)=>{ if(!d.v) return; const off=(i-(vals.length-1)/2)*Math.min(r(d.v)*1.1, W/60);
+      g.append("circle").attr("cx",x+off).attr("cy",y).attr("r",r(d.v)).attr("fill",css(d.p.colorVar)).attr("fill-opacity",.55).attr("stroke",css(d.p.colorVar)).attr("stroke-width",1.5); });
+    g.append("circle").attr("cx",x).attr("cy",y).attr("r",Math.max(14, r(d3.max(vals,d=>d.v)||0)+6)).attr("fill","transparent")
+      .on("mousemove",ev=>showTip(ev,`<b>${esc(REG_LABEL[rid]||rid)}</b><br>`+vals.map(d=>`<span class="dot" style="background:var(${d.p.colorVar})"></span> ${esc(d.p.name.split(" ")[0])}: ${d.v} applied${d.t?`, ${d.t} to apply yourself`:""}`).join("<br>")))
+      .on("mouseleave",hideTip);
+    if(total) g.append("text").attr("x",x).attr("y",y-r(d3.max(vals,d=>d.v))-5).attr("text-anchor","middle").text(total);
+  });
+  document.getElementById("mapLegend").innerHTML=ps.map(p=>`<span><span class="dot" style="background:var(${p.colorVar})"></span> ${esc(p.name)}</span>`).join("")+'<span>Bubble size = applications · dashed ring = target region with none yet · hover for details</span>';
+  document.getElementById("mapNote").textContent="· all time, "+d3.sum(counts,o=>d3.sum(Object.values(o.c)))+" applied";
+}
+function drawHeat(){
+  const el=document.getElementById("heatViz"); if(!el||!window.d3) return;
+  const ps=shown(), W=Math.max(300, el.clientWidth||520), rowH=24, left=150, top=26, cw=(W-left-10)/Math.max(1,ps.length), H=top+REG_ORDER.length*rowH+4;
+  const data=[]; ps.forEach((p,j)=>{ const c=regionCounts(p,["applied"]); REG_ORDER.forEach((rid,i)=>data.push({p,j,i,rid,v:c[rid]||0})); });
+  const max=d3.max(data,d=>d.v)||1;
+  el.innerHTML=""; const svg=d3.select(el).append("svg").attr("viewBox",`0 0 ${W} ${H}`);
+  ps.forEach((p,j)=>svg.append("text").attr("x",left+cw*j+cw/2).attr("y",16).attr("text-anchor","middle").attr("font-weight",600).text(p.name.split(" ")[0]));
+  REG_ORDER.forEach((rid,i)=>svg.append("text").attr("x",left-8).attr("y",top+i*rowH+rowH/2+4).attr("text-anchor","end").text(REG_LABEL[rid]||rid));
+  svg.selectAll("rect").data(data).join("rect").attr("x",d=>left+cw*d.j+2).attr("y",d=>top+d.i*rowH+2).attr("width",cw-4).attr("height",rowH-4).attr("rx",4)
+    .attr("fill",d=>d.v? d3.interpolate(css("--chip"), css(d.p.colorVar))(0.25+0.75*d.v/max) : css("--chip"))
+    .on("mousemove",(ev,d)=>showTip(ev,`<b>${esc(d.p.name.split(" ")[0])}</b> · ${esc(REG_LABEL[d.rid]||d.rid)}: ${d.v} applied`)).on("mouseleave",hideTip);
+  svg.selectAll("text.v").data(data.filter(d=>d.v)).join("text").attr("class","v").attr("x",d=>left+cw*d.j+cw/2).attr("y",d=>top+d.i*rowH+rowH/2+4).attr("text-anchor","middle").attr("style","fill:var(--ink);font-weight:600").text(d=>d.v);
+}
+const OUTCOMES=[["Applied",["applied"],"--ok"],["Apply yourself",["manual-todo","blocked","needs-account","blocked-upload"],"--info"],["Waiting on profile answers",["skipped-question","error-retry"],"--warn"],["Filtered out",["skipped-filter","wrong-account"],"--grey"]];
+function drawFunnel(){
+  const el=document.getElementById("funnelViz"); if(!el||!window.d3) return;
+  const ps=shown(), W=Math.max(300, el.clientWidth||520), left=80, barH=30, gap=16, H=ps.length*(barH+gap)+10;
+  const rows=ps.map(p=>{ const st=p.status||{}; let x0=0; const segs=OUTCOMES.map(([lab,keys,col])=>{ const v=d3.sum(keys,k=>st[k]||0); const s={lab,v,col,x0}; x0+=v; return s; }); return {p,segs,total:x0}; });
+  const max=d3.max(rows,r=>r.total)||1, x=d3.scaleLinear().domain([0,max]).range([0,W-left-40]);
+  el.innerHTML=""; const svg=d3.select(el).append("svg").attr("viewBox",`0 0 ${W} ${H}`);
+  rows.forEach((row,i)=>{ const y=i*(barH+gap)+4;
+    svg.append("text").attr("x",left-8).attr("y",y+barH/2+4).attr("text-anchor","end").attr("font-weight",600).text(row.p.name.split(" ")[0]);
+    row.segs.forEach(s=>{ if(!s.v) return; svg.append("rect").attr("x",left+x(s.x0)).attr("y",y).attr("width",Math.max(1,x(s.v)-1)).attr("height",barH).attr("rx",3).attr("fill",css(s.col)).attr("fill-opacity",.85)
+      .on("mousemove",ev=>showTip(ev,`<b>${esc(row.p.name.split(" ")[0])}</b> · ${s.lab}: ${s.v} (${Math.round(100*s.v/row.total)}%)`)).on("mouseleave",hideTip);
+      if(x(s.v)>26) svg.append("text").attr("x",left+x(s.x0)+x(s.v)/2).attr("y",y+barH/2+4).attr("text-anchor","middle").attr("style","fill:#fff;font-weight:600").text(s.v); });
+    svg.append("text").attr("x",left+x(row.total)+6).attr("y",y+barH/2+4).text(row.total);
+  });
+  document.getElementById("funnelLegend").innerHTML=OUTCOMES.map(([l,,c])=>`<span><span class="dot" style="background:var(${c})"></span> ${l}</span>`).join("");
+}
+function drawViz(){ try{ drawMap(); drawHeat(); drawFunnel(); }catch(e){ console.error(e); } }
+
+function render(){ document.documentElement.style.setProperty('--n', shown().length); drawSegs(); kpis(); quota(); todo(); svgChart($("#dailyChart"),"daily"); svgChart($("#cumChart"),"cum"); legend($("#dailyLegend")); legend($("#cumLegend")); drawViz(); breakdowns(); runsTable(); statusOptions(); appsTable(); if(!PUB){ resumes(); reports(); } else { $("#resumeCards").innerHTML=""; $("#reportCards").innerHTML=""; } }
 ["#q","#fStatus","#fTier","#fRegion"].forEach(s=>$(s).addEventListener("input",appsTable));
 // ---------- Profiles editor (File System Access API; writes <person>/profile.json + profile.md) ----------
 let dir = null, profSel = people[0]?.id, dirty = false;
@@ -398,7 +484,7 @@ window.addEventListener("beforeunload",e=>{ if(dirty){ e.preventDefault(); e.ret
 function showView(){ $("#viewDash").style.display=view==="dash"?"":"none"; $("#viewProf").style.display=view==="prof"?"":"none"; $("#personSeg").style.display=view==="dash"?"":"none"; $("#rangeSeg").style.display=view==="dash"?"":"none"; drawSegs(); if(view==="prof") renderProf(); else render(); }
 try{ if(location.hash==="#profiles") view="prof"; }catch(e){}
 
-let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{svgChart($("#dailyChart"),"daily");svgChart($("#cumChart"),"cum");},150);});
+let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{svgChart($("#dailyChart"),"daily");svgChart($("#cumChart"),"cum");drawViz();},150);});
 // auto-refresh: re-load dashboard/data.js every 60s and re-render if it changed (works from file:// and GitHub Pages)
 function reloadData(){
   if(view!=="dash") return;

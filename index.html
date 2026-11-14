@@ -155,7 +155,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 if(!D){ const e=$("#err"); e.style.display="block"; e.innerHTML="No data yet. Run <code>python3 tools/build_dashboard.py</code> in the jobs folder, then reload."; return; }
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const PCOL = ["--p0","--p1","--p2"];
-const STATUS_COL = {"applied":"--ok","skipped-question":"--warn","skipped-filter":"--grey","needs-account":"--info","blocked":"--bad","blocked-upload":"--bad","wrong-account":"--bad","error-retry":"--warn"};
+const STATUS_COL = {"applied":"--ok","manual-todo":"--info","ready-to-retry":"--p0","skipped-question":"--warn","skipped-filter":"--grey","needs-account":"--info","blocked":"--bad","blocked-upload":"--bad","wrong-account":"--bad","error-retry":"--warn"};
 const people = D.people.map((p,i)=>({...p, colorVar:PCOL[i%PCOL.length]}));
 const PUB = !!D.public;
 let sel = "all", range = 30, view = "dash";
@@ -179,7 +179,7 @@ function kpis(){
   $("#kpiCards").innerHTML = shown().map(p=>{
     const k=p.kpis;
     const items=[["Applied total",k.applied_total],["Applied today",k.applied_today],["Last 7 days",k.applied_7d],["Last 30 days",k.applied_30d],
-      ["Jobs handled",k.handled_total],["Apply rate (excl. retries)",k.apply_rate+"%"],["Companies",k.companies],["Resume versions",k.resume_versions],
+      ["Jobs handled",k.handled_total],["Ready to retry",(p.status||{})["ready-to-retry"]||0],["Apply rate (excl. retries)",k.apply_rate+"%"],["Companies",k.companies],["Resume versions",k.resume_versions],
       ["Runs",k.runs],["Avg / active day",k.avg_per_active_day]];
     return `<div class="card"><h2><span class="dot" style="background:var(${p.colorVar})"></span>${esc(p.name)} <span class="sub">· ${esc(p.target)}</span></h2>
       <div class="kpis">${items.map(([l,v])=>`<div class="kpi"><b>${esc(v)}</b><span>${l}</span></div>`).join("")}</div>
@@ -365,7 +365,7 @@ function drawHeat(){
     .on("mousemove",(ev,d)=>showTip(ev,`<b>${esc(d.p.name.split(" ")[0])}</b> · ${esc(REG_LABEL[d.rid]||d.rid)}: ${d.v} applied`)).on("mouseleave",hideTip);
   svg.selectAll("text.v").data(data.filter(d=>d.v)).join("text").attr("class","v").attr("x",d=>left+cw*d.j+cw/2).attr("y",d=>top+d.i*rowH+rowH/2+4).attr("text-anchor","middle").attr("style","fill:var(--ink);font-weight:600").text(d=>d.v);
 }
-const OUTCOMES=[["Applied",["applied"],"--ok"],["Apply yourself",["manual-todo","blocked","needs-account","blocked-upload"],"--info"],["Waiting on profile answers",["skipped-question","error-retry"],"--warn"],["Filtered out",["skipped-filter","wrong-account"],"--grey"]];
+const OUTCOMES=[["Applied",["applied"],"--ok"],["Apply yourself",["manual-todo","blocked","needs-account","blocked-upload"],"--info"],["Ready to retry (profile updated)",["ready-to-retry","error-retry"],"--p0"],["Waiting on profile answers",["skipped-question"],"--warn"],["Filtered out",["skipped-filter","wrong-account"],"--grey"]];
 function drawFunnel(){
   const el=document.getElementById("funnelViz"); if(!el||!window.d3) return;
   const ps=shown(), W=Math.max(300, el.clientWidth||520), left=80, barH=30, gap=16, H=ps.length*(barH+gap)+10;
@@ -471,7 +471,7 @@ $("#saveBtn").onclick = async ()=>{
     const mine=new Map((pr.questions||[]).map(q=>[nq(q.q),q]));
     const removed=new Set((profs["_orig_"+profSel]||[]).filter(k=>!mine.has(k)));
     if(disk){ for(const q of disk.questions||[]){ const k=nq(q.q); if(mine.has(k)){ const m=mine.get(k); m.count=Math.max(m.count||0,q.count||0); m.companies=q.companies||m.companies; m.last_seen=q.last_seen||m.last_seen; } else if(!removed.has(k)){ pr.questions.push(q); mine.set(k,q); } } }
-    delete pr._deleted; pr.updated_at=stamp();
+    delete pr._deleted; pr.updated_at=stamp(); pr.answers_updated_at=pr.updated_at;
     await writeText(person.folder+"/profile.json", JSON.stringify(pr,null,1));
     await writeText(person.folder+"/profile.md", profMd(pr));
     profs["_orig_"+profSel]=(pr.questions||[]).map(q=>nq(q.q));
